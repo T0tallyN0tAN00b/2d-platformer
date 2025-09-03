@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Merp Platformer</title>
+  <title>Smiley Platformer</title>
   <style>
     body { margin: 0; background: #87CEEB; }
     canvas { display: block; margin: auto; background: #d0f4f7; }
@@ -13,11 +13,7 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// Load Merp sprite
-const merpImg = new Image();
-merpImg.src = "18920494-8e20-4a6c-8c4e-57cdb5ca8608.png"; // <-- put your image in the same folder
-
-// Player (Merp)
+// Player (Smiley face)
 let player = {
   x: 100,
   y: 300,
@@ -91,8 +87,26 @@ function draw() {
     ctx.fillRect(p.x, p.y, p.width, p.height);
   }
 
-  // Draw Merp
-  ctx.drawImage(merpImg, player.x, player.y, player.width, player.height);
+  // Draw smiley face player
+  ctx.beginPath();
+  ctx.arc(player.x + player.width/2, player.y + player.height/2, player.width/2, 0, Math.PI * 2);
+  ctx.fillStyle = "yellow";
+  ctx.fill();
+  ctx.stroke();
+
+  // Eyes
+  ctx.fillStyle = "black";
+  ctx.beginPath();
+  ctx.arc(player.x + player.width/3, player.y + player.height/3, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(player.x + 2*player.width/3, player.y + player.height/3, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Smile
+  ctx.beginPath();
+  ctx.arc(player.x + player.width/2, player.y + player.height/2, 15, 0, Math.PI);
+  ctx.stroke();
 }
 
 update();
