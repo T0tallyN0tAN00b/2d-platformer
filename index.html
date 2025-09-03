@@ -1,14 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Smiley Platformer</title>
-  <style>
-    body { margin: 0; background: #87CEEB; }
-    canvas { display: block; margin: auto; background: #d0f4f7; }
-  </style>
-</head>
-<body>
-<canvas id="gameCanvas" width="800" height="400"></canvas>
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -63,13 +52,11 @@ function update() {
   for (let p of platforms) {
     if (player.x < p.x + p.width &&
         player.x + player.width > p.x &&
-        player.y < p.y + p.height &&
-        player.y + player.height > p.y) {
-      if (player.dy > 0) { // falling down
-        player.y = p.y - player.height;
-        player.dy = 0;
-        player.grounded = true;
-      }
+        player.y + player.height <= p.y + 10 &&  // ✅ tolerance for landing
+        player.y + player.height + player.dy >= p.y) {
+      player.y = p.y - player.height;
+      player.dy = 0;
+      player.grounded = true;
     }
   }
 
@@ -111,5 +98,3 @@ function draw() {
 
 update();
 </script>
-</body>
-</html>
