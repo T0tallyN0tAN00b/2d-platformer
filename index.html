@@ -1,100 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smiley Platformer</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: #87CEEB; /* sky blue */
+    font-family: sans-serif;
+  }
+  canvas {
+    display: block;
+    background: #87CEEB;
+  }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
 <script>
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+// ----- SETUP -----
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = 800;
+canvas.height = 400;
 
-// Player (Smiley face)
-let player = {
-  x: 100,
-  y: 300,
-  width: 50,
-  height: 50,
-  dx: 0,
+// ----- GAME VARIABLES -----
+const gravity = 0.7;
+const platforms = [];
+const platformCount = 10;
+
+const player = {
+  x: 50,
+  y: 0,
+  width: 40,
+  height: 40,
   dy: 0,
-  gravity: 0.8,
-  jumpPower: -12,
-  grounded: false,
-  speed: 5
+  speed: 5,
+  jumping: true
 };
 
-// Platforms
-let platforms = [
-  { x: 0, y: 350, width: 800, height: 50 },
-  { x: 200, y: 250, width: 100, height: 20 },
-  { x: 400, y: 180, width: 100, height: 20 },
-  { x: 600, y: 300, width: 100, height: 20 }
-];
-
-// Input
-let keys = {};
-document.addEventListener("keydown", e => keys[e.code] = true);
-document.addEventListener("keyup", e => keys[e.code] = false);
-
-// Game loop
-function update() {
-  // Horizontal movement
-  if (keys["ArrowLeft"]) player.dx = -player.speed;
-  else if (keys["ArrowRight"]) player.dx = player.speed;
-  else player.dx = 0;
-
-  // Jump
-  if (keys["Space"] && player.grounded) {
-    player.dy = player.jumpPower;
-    player.grounded = false;
+// ----- RANDOM PLATFORM GENERATOR -----
+function createPlatforms() {
+  platforms.length = 0;
+  for (let i = 0; i < platformCount; i++) {
+    let width = Math.random() * 100 + 50;
+    let x = Math.random() * (canvas.width - width);
+    let y = i * 35 + 50;
+    platforms.push({ x, y, width, height: 10 });
   }
+}
 
-  // Apply gravity
-  player.dy += player.gravity;
-  player.x += player.dx;
+// ----- DRAW FUNCTIONS -----
+function drawPlayer() {
+  ctx.fillStyle = 'yellow';
+  ctx.beginPath();
+  ctx.arc(player.x + player.width/2, player.y + player.height/2, player.width/2, 0, Math.PI * 2);
+  ctx.fill();
+  // eyes
+  ctx.fillStyle = 'black';
+  ctx.beginPath();
+  ctx.arc(player.x + 12, player.y + 15, 4, 0, Math.PI * 2);
+  ctx.arc(player.x + 28, player.y + 15, 4, 0, Math.PI * 2);
+  ctx.fill();
+  // smile
+  ctx.beginPath();
+  ctx.arc(player.x + 20, player.y + 25, 10, 0, Math.PI);
+  ctx.stroke();
+}
+
+function drawPlatforms() {
+  ctx.fillStyle = 'green';
+  platforms.forEach(p => {
+    ctx.fillRect(p.x, p.y, p.width, p.height);
+  });
+}
+
+// ----- GAME LOOP -----
+function update() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // gravity
+  player.dy += gravity;
   player.y += player.dy;
 
-  // Collision with platforms
-  player.grounded = false;
-  for (let p of platforms) {
-    if (player.x < p.x + p.width &&
-        player.x + player.width > p.x &&
-        player.y + player.height <= p.y + 10 &&  // ✅ tolerance for landing
-        player.y + player.height + player.dy >= p.y) {
-      player.y = p.y - player.height;
+  // collision
+  platforms.forEach(p => {
+    if (player.x + player.width > p.x &&
+        player.x < p.x + p.width &&
+        player.y + player.height > p.y &&
+        player.y + player.height < p.y + p.height + player.dy) {
       player.dy = 0;
-      player.grounded = true;
+      player.jumping = false;
+      player.y = p.y - player.height;
     }
+  });
+
+  // floor collision
+  if (player.y + player.height > canvas.height) {
+    player.y = canvas.height - player.height;
+    player.dy = 0;
+    player.jumping = false;
   }
 
-  draw();
+  drawPlatforms();
+  drawPlayer();
   requestAnimationFrame(update);
 }
 
-// Draw everything
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+// ----- CONTROLS -----
+const keys = {};
+document.addEventListener('keydown', e => keys[e.code] = true);
+document.addEventListener('keyup', e => keys[e.code] = false);
 
-  // Draw platforms
-  ctx.fillStyle = "#654321";
-  for (let p of platforms) {
-    ctx.fillRect(p.x, p.y, p.width, p.height);
+function movePlayer() {
+  if (keys['ArrowLeft']) player.x -= player.speed;
+  if (keys['ArrowRight']) player.x += player.speed;
+  if (keys['Space'] && !player.jumping) {
+    player.dy = -12;
+    player.jumping = true;
   }
-
-  // Draw smiley face player
-  ctx.beginPath();
-  ctx.arc(player.x + player.width/2, player.y + player.height/2, player.width/2, 0, Math.PI * 2);
-  ctx.fillStyle = "yellow";
-  ctx.fill();
-  ctx.stroke();
-
-  // Eyes
-  ctx.fillStyle = "black";
-  ctx.beginPath();
-  ctx.arc(player.x + player.width/3, player.y + player.height/3, 4, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(player.x + 2*player.width/3, player.y + player.height/3, 4, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Smile
-  ctx.beginPath();
-  ctx.arc(player.x + player.width/2, player.y + player.height/2, 15, 0, Math.PI);
-  ctx.stroke();
+  requestAnimationFrame(movePlayer);
 }
 
+// ----- INIT -----
+createPlatforms();
 update();
+movePlayer();
 </script>
+</body>
+</html>
+
