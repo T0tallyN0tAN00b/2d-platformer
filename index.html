@@ -29,13 +29,13 @@ canvas.height = 400;
 // ----- GAME VARIABLES -----
 const gravity = 0.6;
 const platforms = [];
-const platformCount = 10;
-let scrollY = 0; // total scroll to track score
+const platformCount = 12;
+let scrollY = 0; 
 let score = 0;
 
 const player = {
-  x: 50,
-  y: canvas.height - 60,
+  x: 100,
+  y: canvas.height - 100,
   width: 40,
   height: 40,
   dy: 0,
@@ -47,9 +47,10 @@ const player = {
 function createPlatforms(offsetY = 0) {
   let lastY = offsetY + canvas.height - 50;
   for (let i = 0; i < platformCount; i++) {
-    let width = Math.random() * 100 + 50;
+    let width = Math.random() * 100 + 60;
     let x = Math.random() * (canvas.width - width);
-    let y = lastY - Math.random() * 80 - 40; // max jump distance ~120
+    // keep platforms within reachable jump distance
+    let y = lastY - (Math.random() * 60 + 40); // 40–100 px apart
     platforms.push({ x, y, width, height: 10 });
     lastY = y;
   }
@@ -94,7 +95,7 @@ function update() {
   player.dy += gravity;
   player.y += player.dy;
 
-  // collision
+  // collision with platforms
   platforms.forEach(p => {
     if (player.x + player.width > p.x &&
         player.x < p.x + p.width &&
@@ -107,11 +108,10 @@ function update() {
     }
   });
 
-  // floor collision
-  if (player.y + player.height > canvas.height) {
-    player.y = canvas.height - player.height;
-    player.dy = 0;
-    player.jumping = false;
+  // remove ground dependency (if player falls below screen = lose)
+  if (player.y > canvas.height) {
+    alert("Game Over! Your score: " + Math.floor(score));
+    document.location.reload();
   }
 
   // SCROLLING UP
@@ -121,7 +121,7 @@ function update() {
     scrollY += dy;
     platforms.forEach(p => p.y += dy);
 
-    // Generate new platforms if necessary
+    // Generate more platforms when needed
     let highestPlatform = Math.min(...platforms.map(p => p.y));
     if (highestPlatform > 0) {
       createPlatforms(-canvas.height);
@@ -146,7 +146,7 @@ function movePlayer() {
   if (keys['ArrowLeft']) player.x -= player.speed;
   if (keys['ArrowRight']) player.x += player.speed;
   if (keys['ArrowUp'] && !player.jumping) {
-    player.dy = -15; // stronger jump
+    player.dy = -15; // big jump so you can reach platforms
     player.jumping = true;
   }
   requestAnimationFrame(movePlayer);
@@ -159,3 +159,4 @@ movePlayer();
 </script>
 </body>
 </html>
+
