@@ -30,12 +30,13 @@ canvas.height = 400;
 const gravity = 0.6;
 const platforms = [];
 const platformCount = 12;
-let scrollY = 0; 
+let scrollY = 0;
 let score = 0;
+let autoScrollSpeed = 1.2; // screen scroll speed
 
 const player = {
   x: 100,
-  y: canvas.height - 100,
+  y: 0, // we’ll set this after platforms are made
   width: 40,
   height: 40,
   dy: 0,
@@ -49,8 +50,8 @@ function createPlatforms(offsetY = 0) {
   for (let i = 0; i < platformCount; i++) {
     let width = Math.random() * 100 + 60;
     let x = Math.random() * (canvas.width - width);
-    // keep platforms within reachable jump distance
-    let y = lastY - (Math.random() * 60 + 40); // 40–100 px apart
+    // keep platforms within jump distance
+    let y = lastY - (Math.random() * 60 + 40);
     platforms.push({ x, y, width, height: 10 });
     lastY = y;
   }
@@ -108,24 +109,21 @@ function update() {
     }
   });
 
-  // remove ground dependency (if player falls below screen = lose)
+  // AUTO SCROLL UP
+  player.y += autoScrollSpeed;
+  platforms.forEach(p => p.y += autoScrollSpeed);
+  scrollY += autoScrollSpeed;
+
+  // Generate more platforms when needed
+  let highestPlatform = Math.min(...platforms.map(p => p.y));
+  if (highestPlatform > 0) {
+    createPlatforms(-canvas.height);
+  }
+
+  // Game over if player falls below screen
   if (player.y > canvas.height) {
     alert("Game Over! Your score: " + Math.floor(score));
     document.location.reload();
-  }
-
-  // SCROLLING UP
-  if (player.y < 150) {
-    let dy = 150 - player.y;
-    player.y = 150;
-    scrollY += dy;
-    platforms.forEach(p => p.y += dy);
-
-    // Generate more platforms when needed
-    let highestPlatform = Math.min(...platforms.map(p => p.y));
-    if (highestPlatform > 0) {
-      createPlatforms(-canvas.height);
-    }
   }
 
   // Update score
@@ -146,7 +144,7 @@ function movePlayer() {
   if (keys['ArrowLeft']) player.x -= player.speed;
   if (keys['ArrowRight']) player.x += player.speed;
   if (keys['ArrowUp'] && !player.jumping) {
-    player.dy = -15; // big jump so you can reach platforms
+    player.dy = -15;
     player.jumping = true;
   }
   requestAnimationFrame(movePlayer);
@@ -154,6 +152,12 @@ function movePlayer() {
 
 // ----- INIT -----
 createPlatforms();
+
+// put player on the *lowest platform*
+let lowest = platforms.reduce((a, b) => a.y > b.y ? a : b);
+player.x = lowest.x + lowest.width / 2 - player.width / 2;
+player.y = lowest.y - player.height;
+
 update();
 movePlayer();
 </script>
