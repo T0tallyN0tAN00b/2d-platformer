@@ -19,8 +19,8 @@ canvas.height=400;
 
 // Game constants
 const gravity=0.6;
-const autoScrollSpeed=1.2;
-const maxParticles=80;
+let autoScrollSpeed=2.5; // faster
+const maxParticles=20; // only a few big particles
 
 // Game state
 let platforms=[];
@@ -30,46 +30,42 @@ let score=0;
 let gameOver=false;
 
 // Player
-const player={x:100,y:0,width:40,height:40,dy:0,speed:5,jumpsLeft:2,canJump:true};
+const player={x:100,y:0,width:40,height:40,dy:0,speed:6,jumpsLeft:2,canJump:true};
 
 // Particles
 let particles=[];
-function createParticles(x,y,color,count=6){
+function createParticles(x,y,color,count=3){ // few big particles
   for(let i=0;i<count;i++){
     if(particles.length>=maxParticles) break;
     particles.push({
-      x:x+player.width/2, y:y+player.height/2,
-      dx:(Math.random()-0.5)*2.5,
-      dy:(Math.random()-0.5)*2.5,
-      size:Math.random()*3+1,
+      x:x+player.width/2,
+      y:y+player.height/2,
+      dx:(Math.random()-0.5)*3,
+      dy:(Math.random()-0.5)*-3,
+      size:8, // big particles
       life:20,
       color
     });
   }
 }
 function updateParticles(){
-  // Update particles
-  particles.forEach(p=>{
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
     p.x+=p.dx; p.y+=p.dy;
-    p.size*=0.95;
+    p.size*=0.9;
     p.life--;
-  });
-  // Keep only alive particles
-  particles=particles.filter(p=>p.life>0);
-  // Draw
-  particles.forEach(p=>{
-    ctx.fillStyle=p.color;
-    ctx.fillRect(p.x,p.y,p.size,p.size);
-  });
+    if(p.life<=0) particles.splice(i,1);
+    else ctx.fillStyle=p.color, ctx.fillRect(p.x,p.y,p.size,p.size);
+  }
 }
 
 // Platforms
 function createPlatforms(offsetY=0){
   let lastY=offsetY+canvas.height-50;
   for(let i=0;i<platformCount;i++){
-    let width=Math.random()*100+60;
+    let width=Math.random()*120+60;
     let x=Math.random()*(canvas.width-width);
-    let y=lastY-(Math.random()*30+50);
+    let y=lastY-(Math.random()*50+50);
     platforms.push({x,y,width,height:10});
     lastY=y;
   }
@@ -81,7 +77,7 @@ function drawPlayer(){
   ctx.fillRect(player.x,player.y,player.width,player.height);
   ctx.strokeStyle='black';
   ctx.strokeRect(player.x,player.y,player.width,player.height);
-  // Smiley
+  // Smiley face
   ctx.fillStyle='black';
   ctx.beginPath();
   ctx.arc(player.x+12,player.y+15,3,0,Math.PI*2);
@@ -145,8 +141,8 @@ function gameLoop(){
     if(keys['ArrowRight']) player.x+=player.speed;
     if(keys['ArrowUp'] && player.canJump && player.jumpsLeft>0){
       player.dy=-15;
-      if(player.jumpsLeft===2) createParticles(player.x,player.y,'orange',8);
-      else createParticles(player.x,player.y,'white',12);
+      if(player.jumpsLeft===2) createParticles(player.x,player.y,'orange',2);
+      else createParticles(player.x,player.y,'white',3);
       player.jumpsLeft--;
       player.canJump=false;
     }
@@ -156,15 +152,13 @@ function gameLoop(){
     player.y+=player.dy;
 
     // Collision
-    let landed=false;
     for(let p of platforms){
       if(player.x+player.width>p.x && player.x<p.x+p.width &&
          player.y+player.height>p.y && player.y+player.height<p.y+p.height+player.dy &&
          player.dy>=0){
            player.dy=0;
            player.y=p.y-player.height;
-           landed=true;
-           if(player.jumpsLeft<2) createParticles(player.x,player.y,'orange',5);
+           if(player.jumpsLeft<2) createParticles(player.x,player.y,'orange',2);
            player.jumpsLeft=2;
          }
     }
