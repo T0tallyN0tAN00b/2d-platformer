@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smiley Jumper with Closet & Unlock Messages</title>
+<title>Smiley Jumper with Smooth Skin Unlocks</title>
 <style>
 body { margin:0; overflow:hidden; background:#87CEEB; }
 canvas { display:block; cursor:pointer; }
@@ -17,7 +17,7 @@ const ctx=canvas.getContext('2d');
 canvas.width=800;
 canvas.height=400;
 
-// Game constants
+// Constants
 const gravity=0.6;
 let autoScrollSpeed=3;
 const platformCount=12;
@@ -33,17 +33,22 @@ let inCloset=false;
 
 // Unlock message
 let unlockMessage="";
-let unlockTimer=0;
+let unlockAlpha=0;
+let unlockY=50;
 
 // Skins
 const skins = [
-    {color:'orange', name:'Default', unlock:0},
-    {color:'blue', name:'Blue', unlock:500},
-    {color:'red', name:'Red', unlock:1000},
-    {color:'purple', name:'Purple', unlock:2000}
+    {color:'orange', name:'Default'},
+    {color:'blue', name:'Blue'},
+    {color:'red', name:'Red'},
+    {color:'purple', name:'Purple'},
+    {color:'pink', name:'Pink'},
+    {color:'lime', name:'Lime'},
+    {color:'cyan', name:'Cyan'},
+    {color:'magenta', name:'Magenta'}
 ];
 let currentSkin = 0;
-let unlockedSkins = [0]; // always have default unlocked
+let unlockedSkins = [0]; // always unlocked default
 
 // Player
 const player={x:100,y:0,width:40,height:40,dy:0,speed:7,jumpsLeft:2,canJump:true};
@@ -103,13 +108,14 @@ function drawScore(){
     ctx.fillText('High Score: '+Math.floor(highScore),10,55);
 }
 
-// Draw unlock message
+// Draw smooth unlock message
 function drawUnlockMessage(){
-    if(unlockMessage && unlockTimer>0){
-        ctx.fillStyle='yellow';
-        ctx.font='24px Arial';
-        ctx.fillText(unlockMessage,canvas.width/2-ctx.measureText(unlockMessage).width/2,100);
-        unlockTimer--;
+    if(unlockAlpha>0){
+        ctx.fillStyle=`rgba(255,255,0,${unlockAlpha})`;
+        ctx.font='28px Arial';
+        ctx.fillText(unlockMessage,canvas.width/2-ctx.measureText(unlockMessage).width/2,unlockY);
+        unlockAlpha -= 0.01; // fade out
+        unlockY -= 0.3; // slide up slowly
     }
 }
 
@@ -154,11 +160,9 @@ function drawClosetScreen(){
     ctx.font='20px Arial';
     ctx.fillText('Click a skin to equip',canvas.width/2-90,80);
 
-    // Draw skins
     skins.forEach((s,i)=>{
-        const x = 150 + i*150;
-        const y = 150;
-        ctx.fillStyle = (score>=s.unlock || unlockedSkins.includes(i)) ? s.color : 'gray';
+        const x=150+i*100, y=150;
+        ctx.fillStyle = unlockedSkins.includes(i) ? s.color : 'gray';
         ctx.fillRect(x,y,60,60);
         ctx.strokeStyle='black';
         ctx.strokeRect(x,y,60,60);
@@ -176,9 +180,9 @@ function drawClosetScreen(){
     ctx.fillText('Back',canvas.width/2-25,canvas.height-45);
 }
 
-// Canvas click for menu & closet
+// Canvas click
 canvas.addEventListener('click',e=>{
-    const mx=e.offsetX, my=e.offsetY;
+    const mx=e.offsetX,my=e.offsetY;
     if(!gameStarted){
         if(mx>canvas.width/2-75 && mx<canvas.width/2+75 && my>canvas.height/2 && my<canvas.height/2+50){
             gameStarted=true; restartGame();
@@ -187,15 +191,12 @@ canvas.addEventListener('click',e=>{
             inCloset=true;
         }
     } else if(inCloset){
-        // Skins
         skins.forEach((s,i)=>{
-            const x = 150 + i*150;
-            const y = 150;
+            const x=150+i*100, y=150;
             if(mx>x && mx<x+60 && my>y && my<y+60){
-                if(score>=s.unlock || unlockedSkins.includes(i)) currentSkin=i;
+                if(unlockedSkins.includes(i)) currentSkin=i;
             }
         });
-        // Back
         if(mx>canvas.width/2-75 && mx<canvas.width/2+75 && my>canvas.height-80 && my<canvas.height-30){
             inCloset=false;
         }
@@ -222,56 +223,50 @@ function gameLoop(){
     }
 
     if(!gameOver){
-        // Movement
         if(keys['ArrowLeft']) player.x -= player.speed;
         if(keys['ArrowRight']) player.x += player.speed;
         if(keys['ArrowUp'] && player.canJump && player.jumpsLeft>0){
-            player.dy = -15;
-            player.jumpsLeft--;
-            player.canJump=false;
+            player.dy=-15; player.jumpsLeft--; player.canJump=false;
         }
 
-        // Gravity
-        player.dy += gravity;
-        player.y += player.dy;
+        player.dy+=gravity;
+        player.y+=player.dy;
 
-        // Collision
         for(let p of platforms){
             if(player.x+player.width>p.x && player.x<p.x+p.width &&
                player.y+player.height>p.y && player.y+player.height<p.y+p.height+player.dy &&
                player.dy>=0){
                    player.dy=0;
-                   player.y = p.y-player.height;
+                   player.y=p.y-player.height;
                    player.jumpsLeft=2;
                }
         }
 
-        // Auto-scroll
-        player.y += autoScrollSpeed;
+        player.y+=autoScrollSpeed;
         platforms.forEach(p=>p.y+=autoScrollSpeed);
-        scrollY += autoScrollSpeed;
+        scrollY+=autoScrollSpeed;
 
-        // Remove off-screen platforms
-        platforms = platforms.filter(p=>p.y<canvas.height+50);
-
-        // Generate new platforms
+        platforms=platforms.filter(p=>p.y<canvas.height+50);
         if(Math.min(...platforms.map(p=>p.y))>0) createPlatforms(-canvas.height);
 
-        if(player.y>canvas.height) {
+        if(player.y>canvas.height){
             gameOver=true;
             if(score>highScore) highScore=score;
         }
 
-        score = Math.max(score,scrollY);
+        score=Math.max(score,scrollY);
 
-        // Check for new skin unlocks
-        skins.forEach((s,i)=>{
-            if(score>=s.unlock && !unlockedSkins.includes(i)){
-                unlockedSkins.push(i);
-                unlockMessage = `New Skin Unlocked: ${s.name}!`;
-                unlockTimer = 180; // show for 3 seconds
-            }
-        });
+        // Unlock skins every 2500 points
+        let skinIndex = Math.floor(score/2500);
+        if(skinIndex>0 && skinIndex<skins.length && !unlockedSkins.includes(skinIndex)){
+            unlockedSkins.push(skinIndex);
+            unlockMessage = `New Skin Unlocked: ${skins[skinIndex].name}!`;
+            unlockAlpha=1;
+            unlockY=50;
+        }
+
+        // Auto-equip the highest unlocked skin
+        currentSkin = Math.max(...unlockedSkins);
     }
 
     drawPlatforms();
