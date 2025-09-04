@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Square Jumper</title>
+<title>Square Jumper with Particles</title>
 <style>
   body {
     margin: 0;
@@ -36,6 +36,7 @@ let score = 0;
 let autoScrollSpeed = 1.2;
 let gameOver = false;
 
+// PLAYER
 const player = {
   x: 100,
   y: 0,
@@ -43,8 +44,40 @@ const player = {
   height: 40,
   dy: 0,
   speed: 5,
-  jumpsLeft: 2 // double jump (2 jumps before reset)
+  jumpsLeft: 2
 };
+
+// ----- PARTICLE SYSTEM -----
+let particles = [];
+
+function createParticles(x, y, color, count = 10) {
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x: x + player.width/2,
+      y: y + player.height/2,
+      dx: (Math.random() - 0.5) * 4,
+      dy: (Math.random() - 0.5) * 4,
+      size: Math.random() * 4 + 2,
+      life: 30,
+      color
+    });
+  }
+}
+
+function updateParticles() {
+  particles.forEach((p, i) => {
+    p.x += p.dx;
+    p.y += p.dy;
+    p.life--;
+    p.size *= 0.95;
+    if (p.life <= 0) particles.splice(i, 1);
+  });
+
+  particles.forEach(p => {
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x, p.y, p.size, p.size);
+  });
+}
 
 // ----- PLATFORM GENERATION -----
 function createPlatforms(offsetY = 0) {
@@ -121,7 +154,10 @@ function update() {
         player.dy >= 0) {
       player.dy = 0;
       player.y = p.y - player.height;
-      player.jumpsLeft = 2; // reset jumps when landing
+      if (player.jumpsLeft < 2) {
+        createParticles(player.x, player.y, "orange", 15); // landing particles
+      }
+      player.jumpsLeft = 2; 
     }
   });
 
@@ -130,13 +166,13 @@ function update() {
   platforms.forEach(p => p.y += autoScrollSpeed);
   scrollY += autoScrollSpeed;
 
-  // Generate more platforms when needed
+  // Generate more platforms
   let highestPlatform = Math.min(...platforms.map(p => p.y));
   if (highestPlatform > 0) {
     createPlatforms(-canvas.height);
   }
 
-  // Game over if player falls below screen
+  // Game over
   if (player.y > canvas.height) {
     gameOver = true;
   }
@@ -146,6 +182,7 @@ function update() {
 
   drawPlatforms();
   drawPlayer();
+  updateParticles();
   drawScore();
   requestAnimationFrame(update);
 }
@@ -162,8 +199,14 @@ function movePlayer() {
     if (keys['ArrowUp']) {
       if (player.jumpsLeft > 0) {
         player.dy = -15;
+        if (player.jumpsLeft === 2) {
+          createParticles(player.x, player.y, "orange", 20); // normal jump particles
+        } else if (player.jumpsLeft === 1) {
+          createParticles(player.x, player.y, "white", 25);  // double jump air particles
+          createParticles(player.x, player.y, "lightblue", 20);
+        }
         player.jumpsLeft--;
-        keys['ArrowUp'] = false; // prevents sticky jumping
+        keys['ArrowUp'] = false; 
       }
     }
   }
@@ -186,6 +229,7 @@ canvas.addEventListener("click", (e) => {
 
 function restartGame() {
   platforms.length = 0;
+  particles = [];
   scrollY = 0;
   score = 0;
   gameOver = false;
@@ -193,7 +237,6 @@ function restartGame() {
   player.jumpsLeft = 2;
 
   createPlatforms();
-  // place player on lowest platform
   let lowest = platforms.reduce((a, b) => a.y > b.y ? a : b);
   player.x = lowest.x + lowest.width / 2 - player.width / 2;
   player.y = lowest.y - player.height;
