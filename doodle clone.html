@@ -3,91 +3,82 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smiley Square Jumper</title>
+<title>Fast Smiley Square Jumper</title>
 <style>
-  body { margin: 0; overflow: hidden; background: #87CEEB; }
-  canvas { display: block; cursor: pointer; background: #87CEEB; }
+body { margin:0; overflow:hidden; background:#87CEEB; }
+canvas { display:block; cursor:pointer; background:#87CEEB; }
 </style>
 </head>
 <body>
 <canvas id="gameCanvas"></canvas>
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-canvas.width = 800;
-canvas.height = 400;
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+canvas.width=800;
+canvas.height=400;
 
-const gravity = 0.6;
-const platforms = [];
-const platformCount = 12;
-let scrollY = 0;
-let score = 0;
-let autoScrollSpeed = 1.2;
-let gameOver = false;
+const gravity=0.6;
+const platforms=[];
+const platformCount=12;
+let scrollY=0;
+let score=0;
+let autoScrollSpeed=1.2;
+let gameOver=false;
 
-// PLAYER
-const player = {
-  x: 100,
-  y: 0,
-  width: 40,
-  height: 40,
-  dy: 0,
-  speed: 5,
-  jumpsLeft: 2,
-  canJump: true
+// Player
+const player={
+  x:100, y:0, width:40, height:40,
+  dy:0, speed:5, jumpsLeft:2, canJump:true
 };
 
-// PARTICLES
-let particles = [];
-function createParticles(x, y, color, count=10) {
+// Particles
+let particles=[];
+const maxParticles=150; // limit total particles
+function createParticles(x,y,color,count=10){
   for(let i=0;i<count;i++){
+    if(particles.length>=maxParticles) break;
     particles.push({
-      x: x + player.width/2,
-      y: y + player.height/2,
-      dx: (Math.random()-0.5)*4,
-      dy: (Math.random()-0.5)*4,
-      size: Math.random()*4+2,
-      life: 25,
+      x:x+player.width/2,
+      y:y+player.height/2,
+      dx:(Math.random()-0.5)*4,
+      dy:(Math.random()-0.5)*4,
+      size:Math.random()*3+2,
+      life:25,
       color
     });
   }
 }
-function updateParticles() {
-  let newParticles = [];
-  for(let p of particles){
-    p.x += p.dx;
-    p.y += p.dy;
-    p.size *= 0.95;
+function updateParticles(){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.dx;
+    p.y+=p.dy;
+    p.size*=0.95;
     p.life--;
-    if(p.life>0) newParticles.push(p);
-  }
-  particles = newParticles;
-  for(let p of particles){
-    ctx.fillStyle = p.color;
-    ctx.fillRect(p.x,p.y,p.size,p.size);
+    if(p.life<=0) particles.splice(i,1);
+    else ctx.fillStyle=p.color, ctx.fillRect(p.x,p.y,p.size,p.size);
   }
 }
 
-// PLATFORMS
+// Platforms
 function createPlatforms(offsetY=0){
-  let lastY = offsetY + canvas.height - 50;
+  let lastY=offsetY+canvas.height-50;
   for(let i=0;i<platformCount;i++){
-    let width = Math.random()*100+60;
-    let x = Math.random()*(canvas.width-width);
-    let y = lastY-(Math.random()*30+50); // variable heights, some harder
+    let width=Math.random()*100+60;
+    let x=Math.random()*(canvas.width-width);
+    let y=lastY-(Math.random()*30+50); // variable heights
     platforms.push({x,y,width,height:10});
-    lastY = y;
+    lastY=y;
   }
 }
 
-// DRAW
+// Draw
 function drawPlayer(){
-  ctx.fillStyle = 'orange';
+  ctx.fillStyle='orange';
   ctx.fillRect(player.x,player.y,player.width,player.height);
   ctx.strokeStyle='black';
   ctx.lineWidth=2;
   ctx.strokeRect(player.x,player.y,player.width,player.height);
-
   // Smiley face
   ctx.fillStyle='black';
   ctx.beginPath();
@@ -125,107 +116,85 @@ function drawGameOver(){
   ctx.fillText("Restart",canvas.width/2-40,canvas.height/2+72);
 }
 
-// GAME LOOP
-function update(){
-  if(gameOver){ drawGameOver(); return; }
+// Main Game Loop
+const keys={};
+document.addEventListener('keydown',e=>keys[e.code]=true);
+document.addEventListener('keyup',e=>{keys[e.code]=false; player.canJump=true;});
+canvas.addEventListener('click',e=>{
+  if(gameOver){
+    const mx=e.offsetX, my=e.offsetY;
+    if(mx>canvas.width/2-75 && mx<canvas.width/2+75 && my>canvas.height/2+40 && my<canvas.height/2+90)
+      restartGame();
+  }
+});
 
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+function restartGame(){
+  platforms.length=0; particles=[];
+  scrollY=0; score=0; gameOver=false;
+  player.dy=0; player.jumpsLeft=2;
+  createPlatforms();
+  let lowest=platforms.reduce((a,b)=>a.y>b.y?a:b);
+  player.x=lowest.x+lowest.width/2-player.width/2;
+  player.y=lowest.y-player.height;
+}
 
-  player.dy += gravity;
-  player.y += player.dy;
-
-  // PLATFORM COLLISION
-  let landed=false;
-  for(let p of platforms){
-    if(player.x + player.width > p.x &&
-       player.x < p.x + p.width &&
-       player.y + player.height > p.y &&
-       player.y + player.height < p.y + p.height + player.dy &&
-       player.dy >=0){
-         player.dy=0;
-         player.y=p.y - player.height;
-         landed=true;
-         if(player.jumpsLeft<2){ // only create landing particles when actually landing
-           createParticles(player.x,player.y,"orange",10);
-         }
-         player.jumpsLeft=2;
+function gameLoop(){
+  if(!gameOver){
+    // Movement
+    if(keys['ArrowLeft']) player.x-=player.speed;
+    if(keys['ArrowRight']) player.x+=player.speed;
+    if(keys['ArrowUp'] && player.canJump && player.jumpsLeft>0){
+      player.dy=-15;
+      if(player.jumpsLeft===2) createParticles(player.x,player.y,'orange',10);
+      else createParticles(player.x,player.y,'white',15);
+      player.jumpsLeft--; player.canJump=false;
     }
+
+    // Gravity
+    player.dy+=gravity;
+    player.y+=player.dy;
+
+    // Platform collision
+    for(let p of platforms){
+      if(player.x+player.width>p.x && player.x<p.x+p.width &&
+         player.y+player.height>p.y && player.y+player.height<p.y+p.height+player.dy &&
+         player.dy>=0){
+           player.dy=0;
+           player.y=p.y-player.height;
+           if(player.jumpsLeft<2) createParticles(player.x,player.y,'orange',5);
+           player.jumpsLeft=2;
+         }
+    }
+
+    // Auto scroll
+    player.y+=autoScrollSpeed;
+    for(let p of platforms) p.y+=autoScrollSpeed;
+    scrollY+=autoScrollSpeed;
+
+    if(Math.min(...platforms.map(p=>p.y))>0) createPlatforms(-canvas.height);
+    if(player.y>canvas.height) gameOver=true;
+
+    score=Math.max(score,scrollY);
   }
 
-  // AUTO SCROLL
-  player.y += autoScrollSpeed;
-  for(let p of platforms) p.y += autoScrollSpeed;
-  scrollY += autoScrollSpeed;
-
-  // NEW PLATFORMS
-  if(Math.min(...platforms.map(p=>p.y))>0) createPlatforms(-canvas.height);
-
-  if(player.y>canvas.height) gameOver=true;
-
-  score=Math.max(score,scrollY);
-
+  // Draw
+  ctx.clearRect(0,0,canvas.width,canvas.height);
   drawPlatforms();
   drawPlayer();
   updateParticles();
   drawScore();
-  requestAnimationFrame(update);
-}
+  if(gameOver) drawGameOver();
 
-// CONTROLS
-const keys={};
-document.addEventListener('keydown',e=>keys[e.code]=true);
-document.addEventListener('keyup',e=>{
-  keys[e.code]=false;
-  player.canJump=true;
-});
-
-function movePlayer(){
-  if(!gameOver){
-    if(keys['ArrowLeft']) player.x -= player.speed;
-    if(keys['ArrowRight']) player.x += player.speed;
-    if(keys['ArrowUp'] && player.canJump && player.jumpsLeft>0){
-      player.dy=-15;
-      if(player.jumpsLeft===2) createParticles(player.x,player.y,"orange",15); // first jump
-      else createParticles(player.x,player.y,"white",25); // double jump
-      player.jumpsLeft--;
-      player.canJump=false; 
-    }
-  }
-  requestAnimationFrame(movePlayer);
-}
-
-// RESTART
-canvas.addEventListener("click",(e)=>{
-  if(gameOver){
-    const mx=e.offsetX;
-    const my=e.offsetY;
-    if(mx>canvas.width/2-75 && mx<canvas.width/2+75 &&
-       my>canvas.height/2+40 && my<canvas.height/2+90) restartGame();
-  }
-});
-function restartGame(){
-  platforms.length=0;
-  particles=[];
-  scrollY=0;
-  score=0;
-  gameOver=false;
-  player.dy=0;
-  player.jumpsLeft=2;
-  createPlatforms();
-  let lowest = platforms.reduce((a,b)=>a.y>b.y?a:b);
-  player.x = lowest.x+lowest.width/2 - player.width/2;
-  player.y = lowest.y - player.height;
-  update();
+  requestAnimationFrame(gameLoop);
 }
 
 // INIT
 createPlatforms();
-let lowest = platforms.reduce((a,b)=>a.y>b.y?a:b);
-player.x = lowest.x+lowest.width/2 - player.width/2;
-player.y = lowest.y - player.height;
+let lowest=platforms.reduce((a,b)=>a.y>b.y?a:b);
+player.x=lowest.x+lowest.width/2-player.width/2;
+player.y=lowest.y-player.height;
 
-update();
-movePlayer();
+gameLoop();
 </script>
 </body>
 </html>
