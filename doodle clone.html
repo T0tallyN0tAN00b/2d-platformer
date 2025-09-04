@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smiley Platformer</title>
+<title>Square Jumper</title>
 <style>
   body {
     margin: 0;
@@ -43,7 +43,7 @@ const player = {
   height: 40,
   dy: 0,
   speed: 5,
-  jumping: false
+  jumpsLeft: 2 // double jump (2 jumps before reset)
 };
 
 // ----- PLATFORM GENERATION -----
@@ -60,20 +60,11 @@ function createPlatforms(offsetY = 0) {
 
 // ----- DRAW FUNCTIONS -----
 function drawPlayer() {
-  ctx.fillStyle = 'yellow';
-  ctx.beginPath();
-  ctx.arc(player.x + player.width/2, player.y + player.height/2, player.width/2, 0, Math.PI * 2);
-  ctx.fill();
-  // eyes
-  ctx.fillStyle = 'black';
-  ctx.beginPath();
-  ctx.arc(player.x + 12, player.y + 15, 4, 0, Math.PI * 2);
-  ctx.arc(player.x + 28, player.y + 15, 4, 0, Math.PI * 2);
-  ctx.fill();
-  // smile
-  ctx.beginPath();
-  ctx.arc(player.x + 20, player.y + 25, 10, 0, Math.PI);
-  ctx.stroke();
+  ctx.fillStyle = 'orange';
+  ctx.fillRect(player.x, player.y, player.width, player.height);
+  ctx.strokeStyle = 'black';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(player.x, player.y, player.width, player.height);
 }
 
 function drawPlatforms() {
@@ -129,8 +120,8 @@ function update() {
         player.y + player.height < p.y + p.height + player.dy &&
         player.dy >= 0) {
       player.dy = 0;
-      player.jumping = false;
       player.y = p.y - player.height;
+      player.jumpsLeft = 2; // reset jumps when landing
     }
   });
 
@@ -168,9 +159,12 @@ function movePlayer() {
   if (!gameOver) {
     if (keys['ArrowLeft']) player.x -= player.speed;
     if (keys['ArrowRight']) player.x += player.speed;
-    if (keys['ArrowUp'] && !player.jumping) {
-      player.dy = -15;
-      player.jumping = true;
+    if (keys['ArrowUp']) {
+      if (player.jumpsLeft > 0) {
+        player.dy = -15;
+        player.jumpsLeft--;
+        keys['ArrowUp'] = false; // prevents sticky jumping
+      }
     }
   }
   requestAnimationFrame(movePlayer);
@@ -196,6 +190,7 @@ function restartGame() {
   score = 0;
   gameOver = false;
   player.dy = 0;
+  player.jumpsLeft = 2;
 
   createPlatforms();
   // place player on lowest platform
@@ -208,7 +203,6 @@ function restartGame() {
 
 // ----- INIT -----
 createPlatforms();
-// spawn on lowest platform
 let lowest = platforms.reduce((a, b) => a.y > b.y ? a : b);
 player.x = lowest.x + lowest.width / 2 - player.width / 2;
 player.y = lowest.y - player.height;
@@ -218,4 +212,3 @@ movePlayer();
 </script>
 </body>
 </html>
-
