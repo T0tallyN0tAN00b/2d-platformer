@@ -14,6 +14,7 @@
   canvas {
     display: block;
     background: #87CEEB;
+    cursor: pointer;
   }
 </style>
 </head>
@@ -32,11 +33,12 @@ const platforms = [];
 const platformCount = 12;
 let scrollY = 0;
 let score = 0;
-let autoScrollSpeed = 1.2; // screen scroll speed
+let autoScrollSpeed = 1.2;
+let gameOver = false;
 
 const player = {
   x: 100,
-  y: 0, // we’ll set this after platforms are made
+  y: 0,
   width: 40,
   height: 40,
   dy: 0,
@@ -44,13 +46,12 @@ const player = {
   jumping: false
 };
 
-// ----- SMART PLATFORM GENERATOR -----
+// ----- PLATFORM GENERATION -----
 function createPlatforms(offsetY = 0) {
   let lastY = offsetY + canvas.height - 50;
   for (let i = 0; i < platformCount; i++) {
     let width = Math.random() * 100 + 60;
     let x = Math.random() * (canvas.width - width);
-    // keep platforms within jump distance
     let y = lastY - (Math.random() * 60 + 40);
     platforms.push({ x, y, width, height: 10 });
     lastY = y;
@@ -88,8 +89,32 @@ function drawScore() {
   ctx.fillText('Score: ' + Math.floor(score), 10, 30);
 }
 
+function drawGameOver() {
+  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "white";
+  ctx.font = "40px Arial";
+  ctx.fillText("Game Over!", canvas.width/2 - 100, canvas.height/2 - 40);
+
+  ctx.font = "25px Arial";
+  ctx.fillText("Score: " + Math.floor(score), canvas.width/2 - 60, canvas.height/2);
+
+  ctx.fillStyle = "red";
+  ctx.fillRect(canvas.width/2 - 75, canvas.height/2 + 40, 150, 50);
+
+  ctx.fillStyle = "white";
+  ctx.font = "22px Arial";
+  ctx.fillText("Restart", canvas.width/2 - 40, canvas.height/2 + 72);
+}
+
 // ----- GAME LOOP -----
 function update() {
+  if (gameOver) {
+    drawGameOver();
+    return;
+  }
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // gravity
@@ -122,8 +147,7 @@ function update() {
 
   // Game over if player falls below screen
   if (player.y > canvas.height) {
-    alert("Game Over! Your score: " + Math.floor(score));
-    document.location.reload();
+    gameOver = true;
   }
 
   // Update score
@@ -141,19 +165,50 @@ document.addEventListener('keydown', e => keys[e.code] = true);
 document.addEventListener('keyup', e => keys[e.code] = false);
 
 function movePlayer() {
-  if (keys['ArrowLeft']) player.x -= player.speed;
-  if (keys['ArrowRight']) player.x += player.speed;
-  if (keys['ArrowUp'] && !player.jumping) {
-    player.dy = -15;
-    player.jumping = true;
+  if (!gameOver) {
+    if (keys['ArrowLeft']) player.x -= player.speed;
+    if (keys['ArrowRight']) player.x += player.speed;
+    if (keys['ArrowUp'] && !player.jumping) {
+      player.dy = -15;
+      player.jumping = true;
+    }
   }
   requestAnimationFrame(movePlayer);
 }
 
+// ----- RESTART -----
+canvas.addEventListener("click", (e) => {
+  if (gameOver) {
+    const mouseX = e.offsetX;
+    const mouseY = e.offsetY;
+    if (mouseX > canvas.width/2 - 75 &&
+        mouseX < canvas.width/2 + 75 &&
+        mouseY > canvas.height/2 + 40 &&
+        mouseY < canvas.height/2 + 90) {
+      restartGame();
+    }
+  }
+});
+
+function restartGame() {
+  platforms.length = 0;
+  scrollY = 0;
+  score = 0;
+  gameOver = false;
+  player.dy = 0;
+
+  createPlatforms();
+  // place player on lowest platform
+  let lowest = platforms.reduce((a, b) => a.y > b.y ? a : b);
+  player.x = lowest.x + lowest.width / 2 - player.width / 2;
+  player.y = lowest.y - player.height;
+
+  update();
+}
+
 // ----- INIT -----
 createPlatforms();
-
-// put player on the *lowest platform*
+// spawn on lowest platform
 let lowest = platforms.reduce((a, b) => a.y > b.y ? a : b);
 player.x = lowest.x + lowest.width / 2 - player.width / 2;
 player.y = lowest.y - player.height;
@@ -163,3 +218,4 @@ movePlayer();
 </script>
 </body>
 </html>
+
