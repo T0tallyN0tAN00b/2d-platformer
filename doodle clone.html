@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smiley Jumper with Closet</title>
+<title>Smiley Jumper with Closet & Unlock Messages</title>
 <style>
 body { margin:0; overflow:hidden; background:#87CEEB; }
 canvas { display:block; cursor:pointer; }
@@ -31,6 +31,10 @@ let gameOver=false;
 let gameStarted=false;
 let inCloset=false;
 
+// Unlock message
+let unlockMessage="";
+let unlockTimer=0;
+
 // Skins
 const skins = [
     {color:'orange', name:'Default', unlock:0},
@@ -39,6 +43,7 @@ const skins = [
     {color:'purple', name:'Purple', unlock:2000}
 ];
 let currentSkin = 0;
+let unlockedSkins = [0]; // always have default unlocked
 
 // Player
 const player={x:100,y:0,width:40,height:40,dy:0,speed:7,jumpsLeft:2,canJump:true};
@@ -98,6 +103,16 @@ function drawScore(){
     ctx.fillText('High Score: '+Math.floor(highScore),10,55);
 }
 
+// Draw unlock message
+function drawUnlockMessage(){
+    if(unlockMessage && unlockTimer>0){
+        ctx.fillStyle='yellow';
+        ctx.font='24px Arial';
+        ctx.fillText(unlockMessage,canvas.width/2-ctx.measureText(unlockMessage).width/2,100);
+        unlockTimer--;
+    }
+}
+
 function drawGameOver(){
     ctx.fillStyle="rgba(0,0,0,0.5)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -119,7 +134,7 @@ function drawTitleScreen(){
     ctx.font='50px Arial';
     ctx.fillText('Smiley Jumper',canvas.width/2-170,canvas.height/2-100);
     ctx.font='28px Arial';
-    ctx.fillText('Click "Start" to Play',canvas.width/2-110,canvas.height/2-40);
+    ctx.fillText('Click a button',canvas.width/2-80,canvas.height/2-40);
 
     // Draw buttons
     ctx.fillStyle='green';
@@ -143,7 +158,7 @@ function drawClosetScreen(){
     skins.forEach((s,i)=>{
         const x = 150 + i*150;
         const y = 150;
-        ctx.fillStyle = (score >= s.unlock) ? s.color : 'gray';
+        ctx.fillStyle = (score>=s.unlock || unlockedSkins.includes(i)) ? s.color : 'gray';
         ctx.fillRect(x,y,60,60);
         ctx.strokeStyle='black';
         ctx.strokeRect(x,y,60,60);
@@ -165,24 +180,22 @@ function drawClosetScreen(){
 canvas.addEventListener('click',e=>{
     const mx=e.offsetX, my=e.offsetY;
     if(!gameStarted){
-        // Start button
         if(mx>canvas.width/2-75 && mx<canvas.width/2+75 && my>canvas.height/2 && my<canvas.height/2+50){
             gameStarted=true; restartGame();
         }
-        // Closet button
         if(mx>canvas.width/2-75 && mx<canvas.width/2+75 && my>canvas.height/2+70 && my<canvas.height/2+120){
             inCloset=true;
         }
     } else if(inCloset){
-        // Check skins
+        // Skins
         skins.forEach((s,i)=>{
             const x = 150 + i*150;
             const y = 150;
             if(mx>x && mx<x+60 && my>y && my<y+60){
-                if(score>=s.unlock) currentSkin=i;
+                if(score>=s.unlock || unlockedSkins.includes(i)) currentSkin=i;
             }
         });
-        // Back button
+        // Back
         if(mx>canvas.width/2-75 && mx<canvas.width/2+75 && my>canvas.height-80 && my<canvas.height-30){
             inCloset=false;
         }
@@ -209,11 +222,6 @@ function gameLoop(){
     }
 
     if(!gameOver){
-        // Update current skin based on score
-        for(let i=skins.length-1;i>=0;i--){
-            if(score>=skins[i].unlock){ currentSkin=i; break; }
-        }
-
         // Movement
         if(keys['ArrowLeft']) player.x -= player.speed;
         if(keys['ArrowRight']) player.x += player.speed;
@@ -255,11 +263,21 @@ function gameLoop(){
         }
 
         score = Math.max(score,scrollY);
+
+        // Check for new skin unlocks
+        skins.forEach((s,i)=>{
+            if(score>=s.unlock && !unlockedSkins.includes(i)){
+                unlockedSkins.push(i);
+                unlockMessage = `New Skin Unlocked: ${s.name}!`;
+                unlockTimer = 180; // show for 3 seconds
+            }
+        });
     }
 
     drawPlatforms();
     drawPlayer();
     drawScore();
+    drawUnlockMessage();
     if(gameOver) drawGameOver();
 
     requestAnimationFrame(gameLoop);
